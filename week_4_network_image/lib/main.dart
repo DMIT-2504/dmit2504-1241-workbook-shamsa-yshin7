@@ -14,7 +14,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Network Image',
-      home: ImageScreen()
+      home: ImageScreen() // stateful widget passed here
     );
   }
 }
@@ -37,6 +37,8 @@ class ImageScreen extends StatefulWidget{
 class _ImageState extends State<ImageScreen>{
   
   String? _imageURL; // variable to track image data
+  int _likes = 0; // Like counter
+  int _dislikes = 0; // Dislike counter
 
   //call the endpoint
   //callback to get the image
@@ -54,6 +56,35 @@ class _ImageState extends State<ImageScreen>{
 
   }
 
+  // Function to handle image change and likes
+  void _onTap() {
+    _fetchImage().then((_) { // since the function returns void, we can use underscore here
+      setState(() {
+        _likes += 1;
+      });
+    });
+  }
+
+  void _onLongPress() {
+        _fetchImage().then((_) {
+      setState(() {
+        _dislikes += 1;
+      });
+    });
+  }
+
+  void _onTwoFingerGesture() {
+    _fetchImage();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // perform any initializations
+    _fetchImage();
+  }
+
+
   @override
   Widget build(BuildContext context){
     return Scaffold(
@@ -65,8 +96,17 @@ class _ImageState extends State<ImageScreen>{
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Container(
-            // image displayed here
+          // image displayed here
+          // wrap container with gesture detector
+          GestureDetector(
+            onTap: _onTap,
+            onLongPress: _onLongPress,
+            onScaleStart: (values) { // onScaleStart expects function with args (values)
+              if(values.pointerCount == 2) { // the passed values provide info on how many fingers are touching the screen, in this case we're checking for two fingers
+                _onTwoFingerGesture();
+              }
+            },
+            child: Container(
             height: 500,
             width: double.infinity, // this will take up the entire width of the screen
             decoration: BoxDecoration(
@@ -77,18 +117,55 @@ class _ImageState extends State<ImageScreen>{
               _imageURL!,
               fit: BoxFit.contain  // this prevents cropping
             ) 
+          )
           ),
           // space between image and button
           SizedBox(
             height: 20
           ),
-          // button to load new image
-          // trigger ui rebuild
-          ElevatedButton(onPressed: _fetchImage, 
-            child: Text('Load Image')
-          )
+          LikesDislikesText(like: true, num: _likes,),
+          LikesDislikesText(like: false, num: _dislikes,),
         ]
       ),
     ));
+  }
+}
+
+// display likes and dislikes counters with stateless widget
+class LikesDislikesText extends StatelessWidget{
+
+  final bool like; // use this to determine which label to use
+  final int num; // value for like or dislike
+  
+  const LikesDislikesText({this.like = true, this.num = 0, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        top: 16.0,
+        left: 16.0
+      ),
+      child: Row(
+        children: <Widget>[
+          // label, either like or dislike
+          Text(
+            like ? "Likes: " : "Dislikes: ",
+            style: const TextStyle(
+              fontSize: 24.0,
+              fontWeight: FontWeight.bold
+            )
+          ),
+          // value for like or dislike
+          Text(
+            '$num',
+            style: const TextStyle(
+              fontSize: 24.0,
+              fontWeight: FontWeight.bold,
+            )
+          )
+        ]
+      )
+    );
   }
 }
